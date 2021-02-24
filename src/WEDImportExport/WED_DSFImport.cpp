@@ -22,34 +22,37 @@
  */
 
 #include "WED_DSFImport.h"
+
 #include "DSFLib.h"
-#include "WED_Group.h"
-#include "WED_ExclusionZone.h"
-#include "WED_EnumSystem.h"
-#include "WED_ObjPlacement.h"
+#include "DSF2Text.h"
 #include "PlatformUtils.h"
+#include "FileUtils.h"
+#include "STLUtils.h"
+
+#include "WED_AptIE.h"
+#include "WED_EnumSystem.h"
+#include "WED_GISUtils.h"
+#include "WED_MetadataUpdate.h"
 #include "WED_SimpleBoundaryNode.h"
 
+#include "WED_Airport.h"
+#include "WED_DrapedOrthophoto.h"
+#include "WED_ExclusionZone.h"
 #include "WED_FacadePlacement.h"
+#include "WED_FacadeRing.h"
+#include "WED_FacadeNode.h"
 #include "WED_ForestPlacement.h"
+#include "WED_ForestRing.h"
+#include "WED_Group.h"
 #include "WED_StringPlacement.h"
 #include "WED_LinePlacement.h"
+#include "WED_ObjPlacement.h"
 #include "WED_PolygonPlacement.h"
-#include "WED_DrapedOrthophoto.h"
 #include "WED_Ring.h"
-
 #include "WED_TextureBezierNode.h"
 #include "WED_TextureNode.h"
 #include "WED_SimpleBezierBoundaryNode.h"
 #include "WED_SimpleBoundaryNode.h"
-#include "WED_ForestRing.h"
-#include "WED_FacadeRing.h"
-#include "WED_FacadeNode.h"
-#include "DSF2Text.h"
-#include "WED_GISUtils.h"
-#include "STLUtils.h"
-#include "WED_AptIE.h"
-#include "WED_Airport.h"
 #if ROAD_EDITING
 #include "WED_RoadNode.h"
 #include "WED_RoadEdge.h"
@@ -356,10 +359,10 @@ public:
 	{
 	}
 
-	static void	AddObject(
+	static void	AddObjectWithMode(
 					unsigned int	inObjectType,
 					double			inCoordinates[4],
-					int				inCoordDepth,
+					obj_elev_mode	inMode,
 					void *			inRef)
 	{
 #if !NO_OBJ
@@ -367,10 +370,10 @@ public:
 		WED_ObjPlacement * obj = WED_ObjPlacement::CreateTyped(me->archive);
 		obj->SetResource(me->obj_table[inObjectType]);
 		obj->SetLocation(gis_Geo,Point2(inCoordinates[0],inCoordinates[1]));
-		if(inCoordDepth == 4)
-			obj->SetCustomMSL(inCoordinates[3]);
-		else
+		if (inMode == obj_ModeDraped)
 			obj->SetDefaultMSL();
+		else
+			obj->SetCustomMSL(inCoordinates[3], inMode == obj_ModeAGL);
 		obj->SetHeading(inCoordinates[2]);
 		obj->SetName(me->obj_table_names[inObjectType]);
 		obj->SetParent(me->get_cat_parent(dsf_cat_objects),me->get_cat_parent(dsf_cat_objects)->CountChildren());
@@ -609,6 +612,7 @@ public:
 			me->want_uv=inParam == 65535;
 			me->want_bezier=me->want_uv ? (inCoordDepth == 8) : (inCoordDepth == 4);
 			me->want_wall=false;
+			std::replace(r.begin(), r.end(), '\\', '/');  // DSF created with older windows WED used backslash for local orthophoto paths
 			if(me->want_uv)
 			{
 				WED_DrapedOrthophoto * orth = WED_DrapedOrthophoto::CreateTyped(me->archive);
@@ -867,10 +871,11 @@ public:
 
 		DSFCallbacks_t cb = {	NextPass, AcceptTerrainDef, AcceptObjectDef, AcceptPolygonDef, AcceptNetworkDef, AcceptRasterDef, AcceptProperty,
 								BeginPatch, BeginPrimitive, AddPatchVertex, EndPrimitive, EndPatch,
-								AddObject,
+								AddObjectWithMode,
 								BeginSegment, AddSegmentShapePoint, EndSegment,
 								BeginPolygon, BeginPolygonWinding, AddPolygonPoint,EndPolygonWinding, EndPolygon, AddRasterData, SetFilter };
 
+		LOG_MSG("I/DSF Importing binary DSF from %s\n",file_name);
 		int res = DSFReadFile(file_name, malloc, free, &cb, NULL, this);
 		
 		for(int i = 0; i < dsf_cat_DIM; ++i)
@@ -887,10 +892,11 @@ public:
 
 		DSFCallbacks_t cb = {	NextPass, AcceptTerrainDef, AcceptObjectDef, AcceptPolygonDef, AcceptNetworkDef, AcceptRasterDef, AcceptProperty,
 								BeginPatch, BeginPrimitive, AddPatchVertex, EndPrimitive, EndPatch,
-								AddObject,
+								AddObjectWithMode,
 								BeginSegment, AddSegmentShapePoint, EndSegment,
 								BeginPolygon, BeginPolygonWinding, AddPolygonPoint,EndPolygonWinding, EndPolygon, AddRasterData, SetFilter };
 
+		LOG_MSG("I/DSF Importing text DSF from %s\n",file_name);
 		int ok = Text2DSFWithWriter(file_name, &cb, this);
 		
 		for(int i = 0; i < dsf_cat_DIM; ++i)
@@ -911,9 +917,9 @@ int DSF_Import(const char * path, WED_Thing * base)
 	return importer.do_import_dsf(path, base);
 }
 
-
 void WED_ImportText(const char * path, WED_Thing * base)
 {
 	DSF_Importer importer;
 	importer.do_import_txt(path, base);
 }
+

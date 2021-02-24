@@ -66,6 +66,10 @@ const char *	dsfErrorMessages[] = {
 // Define this to 1 to have the reader print detailed error messages before it returns an error code.
 #define DEBUG_MESSAGES 1
 
+#ifdef LOG_MSG
+	#define printf LOG_MSG
+#endif
+
 // These debug macros are used to swap the headers around.
 #if BIG
 	#if APL
@@ -570,6 +574,7 @@ someday check footer when in sloooow mode
 	while (inPasses[pass_number])
 	{
 		int flags = inPasses[pass_number];
+		obj_elev_mode curObjMode = obj_ModeMSL;
 
 		if (flags & dsf_CmdProps)
 		{
@@ -737,13 +742,13 @@ someday check footer when in sloooow mode
 		 **************************************************************************************************************/
 		case dsf_Cmd_Object						:
 			index = cmdsAtom.ReadUInt16();
-				if (flags & dsf_CmdObjects)
-				{
+			if (flags & dsf_CmdObjects)
+			{
 //				objCoord3[0] = DECODE_SCALED_CURRENT(index)[0];
 //				objCoord3[1] = DECODE_SCALED_CURRENT(index)[1];
 //				objCoord3[2] = DECODE_SCALED_CURRENT(index)[2];
-				inCallbacks->AddObject_f(currentDefinition, DECODE_SCALED_CURRENT(index), planeDepths[currentPool], ref);
-					}
+				inCallbacks->AddObjectWithMode_f(currentDefinition, DECODE_SCALED_CURRENT(index), planeDepths[currentPool] == 4 ? curObjMode : obj_ModeDraped, ref);
+			}
 			break;
 		case dsf_Cmd_ObjectRange				:
 			index1 = cmdsAtom.ReadUInt16();
@@ -754,8 +759,8 @@ someday check footer when in sloooow mode
 //				objCoord3[0] = DECODE_SCALED_CURRENT(index)[0];
 //				objCoord3[1] = DECODE_SCALED_CURRENT(index)[1];
 //				objCoord3[2] = DECODE_SCALED_CURRENT(index)[2];
-				inCallbacks->AddObject_f(currentDefinition, DECODE_SCALED_CURRENT(index), planeDepths[currentPool], ref);
-				}
+				inCallbacks->AddObjectWithMode_f(currentDefinition, DECODE_SCALED_CURRENT(index), planeDepths[currentPool] == 4 ? curObjMode : obj_ModeDraped, ref);
+			}
 			break;
 
 
@@ -1147,6 +1152,12 @@ someday check footer when in sloooow mode
 					commentLen -= sizeof(filter_idx);
 					inCallbacks->SetFilter_f(filter_idx, ref);
 				}
+				if(ctype == dsf_Comment_AGL && commentLen == sizeof(int32_t))
+				{
+					int32_t want_agl = cmdsAtom.ReadSInt32();
+					commentLen -= sizeof(want_agl);
+					curObjMode = want_agl ? obj_ModeAGL : obj_ModeMSL;
+				}
 			}
 			cmdsAtom.Advance(commentLen);
 			break;
@@ -1162,6 +1173,12 @@ someday check footer when in sloooow mode
 					commentLen -= sizeof(filter_idx);
 					inCallbacks->SetFilter_f(filter_idx, ref);
 				}
+				if(ctype == dsf_Comment_AGL && commentLen == sizeof(int32_t))
+				{
+					int32_t want_agl = cmdsAtom.ReadSInt32();
+					commentLen -= sizeof(want_agl);
+					curObjMode = want_agl ? obj_ModeAGL : obj_ModeMSL;
+				}
 			}
 			cmdsAtom.Advance(commentLen);
 			break;
@@ -1176,6 +1193,12 @@ someday check footer when in sloooow mode
 					int32_t filter_idx = cmdsAtom.ReadSInt32();
 					commentLen -= sizeof(filter_idx);
 					inCallbacks->SetFilter_f(filter_idx, ref);
+				}
+				if(ctype == dsf_Comment_AGL && commentLen == sizeof(int32_t))
+				{
+					int32_t want_agl = cmdsAtom.ReadSInt32();
+					commentLen -= sizeof(want_agl);
+					curObjMode = want_agl ? obj_ModeAGL : obj_ModeMSL;
 				}
 			}
 			cmdsAtom.Advance(commentLen);

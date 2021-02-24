@@ -59,9 +59,7 @@ enum {
 	wed_Group,
 	wed_Ungroup,
 	wed_Crop,
-	wed_Overlay,
 	wed_CopyToAirport,
-//	wed_MakeRouting,
 	wed_Split,
 	wed_Align,
 	wed_MatchBezierHandles,
@@ -74,7 +72,7 @@ enum {
 	wed_MovePrev,
 	wed_MoveNext,
 	wed_MoveLast,
-	wed_BreakApartSpecialAgps,
+	wed_BreakApartAgps,
 	wed_ReplaceVehicleObj,
 	// Convert To menu
 	wed_ConvertToPolygon,
@@ -148,6 +146,7 @@ enum {
 	//Organized by alphabetical order
 	wed_AddMetaDataBegin,//WARNING: DO NOT USE!
 	wed_AddMetaDataCity,// or Locality
+	wed_AddMetaDataClosed,
 	wed_AddMetaDataCountry,
 	wed_AddMetaDataDatumLat,
 	wed_AddMetaDataDatumLon,
